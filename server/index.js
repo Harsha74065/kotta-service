@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -20,14 +21,22 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/technician', require('./routes/technician'));
 app.use('/api/payment', require('./routes/payment'));
 
-// ---------- PRODUCTION: Serve React Build ----------
-if (process.env.NODE_ENV === 'production') {
+// ---------- Serve React Build (ALWAYS if build exists) ----------
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+
+if (fs.existsSync(buildPath)) {
+  console.log('React build folder found — serving static files');
   // Serve static files from the React app build folder
-  app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+  app.use(express.static(buildPath));
 
   // For any route that is NOT an API route, serve the React app
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+} else {
+  console.log('No React build folder found — API-only mode');
+  app.get('/', (req, res) => {
+    res.json({ message: 'KottA Service API is running! Build the client to see the website.' });
   });
 }
 
@@ -35,13 +44,9 @@ if (process.env.NODE_ENV === 'production') {
 db.init().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    if (process.env.NODE_ENV === 'production') {
-      console.log('Serving React build in production mode');
-    }
   });
 }).catch((err) => {
   console.error('Failed to initialize database:', err);
-  // Start server anyway even if DB has issues
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT} (DB init had issues)`);
   });

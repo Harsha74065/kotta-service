@@ -2,8 +2,9 @@ services:
   - type: web
     name: kotta-service
     runtime: node
-    buildCommand: npm run render-build
-    startCommand: npm start
+    plan: free
+    buildCommand: npm install && cd client && npm install && npm run build
+    startCommand: node server/index.js
     envVars:
       - key: NODE_ENV
         value: production
