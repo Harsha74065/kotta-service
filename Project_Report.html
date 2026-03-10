@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Service Company Management Application - Project Report</title>
+  <style>
+    @media print {
+      body { margin: 0; }
+      .page-break { page-break-before: always; }
+    }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      line-height: 1.8;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 40px;
+      color: #000;
+      font-size: 14px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
+    }
+    h2 {
+      font-size: 17px;
+      text-transform: uppercase;
+      text-decoration: underline;
+      margin-top: 30px;
+      margin-bottom: 10px;
+    }
+    h3 {
+      font-size: 15px;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    .center { text-align: center; }
+    .title-section {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 20px;
+    }
+    .title-section p {
+      margin: 5px 0;
+      font-size: 15px;
+    }
+    .label {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+    p {
+      text-align: justify;
+      margin: 8px 0;
+    }
+    ul, ol {
+      margin: 8px 0 8px 20px;
+    }
+    li {
+      margin: 6px 0;
+      text-align: justify;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 13px;
+    }
+    table, th, td {
+      border: 1px solid #000;
+    }
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 12px;
+      color: #555;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: TITLE & INTRODUCTION -->
+  <div class="title-section">
+    <h1>Service Company Management Application</h1>
+    <p><strong>Project Report</strong></p>
+    <br>
+    <p><span class="label">Project Title:</span>&nbsp;&nbsp; Service Company Management Application</p>
+    <p><span class="label">Technology:</span>&nbsp;&nbsp; Full-Stack Web Application</p>
+    <p><span class="label">Frontend:</span>&nbsp;&nbsp; React.js, Material-UI</p>
+    <p><span class="label">Backend:</span>&nbsp;&nbsp; Node.js, Express.js</p>
+    <p><span class="label">Database:</span>&nbsp;&nbsp; SQLite</p>
+  </div>
+
+  <h2>1. Introduction</h2>
+  <p>
+    The <strong>Service Company Management Application</strong> is a full-stack web application designed to manage and streamline home repair and maintenance services. In everyday life, when household appliances such as refrigerators, air conditioners, televisions, or washing machines require repair or servicing, users need to call a technician. Once the technician completes the repair, the details of the service — including the date, time, type of appliance, and the company/brand — need to be recorded and stored for future reference.
+  </p>
+  <p>
+    This application solves this problem by providing a digital platform where users can request service, and administrators can manage, track, and store all service records in a centralized database. The system also keeps track of service history so that when a service is needed again (for example, after one year), the admin can easily look up past records and schedule the next service accordingly.
+  </p>
+
+  <h2>2. Aim &amp; Objectives</h2>
+  <p><span class="label">Aim:</span> To develop a web-based service company management application that allows users to request home repair services and enables administrators to manage technicians, services, payments, and maintain a complete service history database.</p>
+
+  <h3>Objectives:</h3>
+  <ol>
+    <li>To create separate and secure login portals for Admin and User, ensuring privacy and access control.</li>
+    <li>To allow users to submit service requests specifying the appliance type, brand/company, description, and preferred date.</li>
+    <li>To enable the admin to assign technicians, track service progress, and update service status.</li>
+    <li>To store all service records including date, time, technician details, appliance type, and company in a database for future reference.</li>
+    <li>To allow the admin to set fixed payment amounts for different service types.</li>
+    <li>To provide a complete service history for both admin and users.</li>
+  </ol>
+
+  <h2>3. Problem Statement</h2>
+  <p>
+    In traditional home repair service companies, all records are maintained manually — often in registers or notebooks. This leads to several problems:
+  </p>
+  <ul>
+    <li><strong>Data Loss:</strong> Paper records can be lost, damaged, or misplaced over time.</li>
+    <li><strong>No Reminders:</strong> There is no system to remind when a service is due again (e.g., annual AC servicing).</li>
+    <li><strong>Difficulty in Tracking:</strong> It is hard to track which technician serviced which appliance, when, and for how much.</li>
+    <li><strong>No User Access:</strong> Customers have no way to view their own service history or request services online.</li>
+    <li><strong>Payment Confusion:</strong> Without fixed pricing, there can be inconsistencies in service charges.</li>
+  </ul>
+  <p>
+    This application addresses all these issues by digitizing the entire process with separate portals for admin and user, a centralized database, and automated record-keeping.
+  </p>
+
+  <div class="page-break"></div>
+
+  <!-- PAGE 2: SYSTEM ARCHITECTURE -->
+  <h2>4. System Architecture</h2>
+  <p>
+    The application follows a <strong>Client-Server Architecture</strong> with a clear separation between the frontend (client) and backend (server). The system is divided into three main layers:
+  </p>
+
+  <h3>4.1 Presentation Layer (Frontend)</h3>
+  <p>
+    The frontend is built using <strong>React.js</strong>, a popular JavaScript library for building user interfaces. It uses <strong>Material-UI (MUI)</strong> for a clean, modern, and responsive design. The frontend handles all user interactions including login, registration, service requests, and dashboard views. It communicates with the backend via REST API calls using <strong>Axios</strong>.
+  </p>
+
+  <h3>4.2 Application Layer (Backend)</h3>
+  <p>
+    The backend is developed using <strong>Node.js</strong> with the <strong>Express.js</strong> framework. It handles all business logic, authentication, authorization, and data processing. The server exposes RESTful API endpoints that the frontend consumes. <strong>JSON Web Tokens (JWT)</strong> are used for secure authentication, and <strong>bcrypt</strong> is used for password hashing.
+  </p>
+
+  <h3>4.3 Data Layer (Database)</h3>
+  <p>
+    The database used is <strong>SQLite</strong>, a lightweight, file-based relational database. It stores all application data including user accounts, technician details, service records, payments, and payment settings. The database is created automatically when the application first starts.
+  </p>
+
+  <h2>5. Database Design</h2>
+  <p>The database consists of five main tables:</p>
+
+  <table>
+    <tr>
+      <th>Table Name</th>
+      <th>Purpose</th>
+      <th>Key Fields</th>
+    </tr>
+    <tr>
+      <td><strong>Users</strong></td>
+      <td>Stores admin and user accounts</td>
+      <td>id, name, email, password, phone, address, role</td>
+    </tr>
+    <tr>
+      <td><strong>Technicians</strong></td>
+      <td>Stores technician information</td>
+      <td>id, name, email, phone, specialization</td>
+    </tr>
+    <tr>
+      <td><strong>Services</strong></td>
+      <td>Stores all service requests and records</td>
+      <td>id, user_id, technician_id, service_type, company, description, status, service_date, completed_date</td>
+    </tr>
+    <tr>
+      <td><strong>Payments</strong></td>
+      <td>Stores payment records for each service</td>
+      <td>id, service_id, amount, payment_type, status</td>
+    </tr>
+    <tr>
+      <td><strong>Payment Settings</strong></td>
+      <td>Stores fixed payment amounts set by admin</td>
+      <td>id, service_type, amount</td>
+    </tr>
+  </table>
+
+  <h3>Table Relationships:</h3>
+  <ul>
+    <li>Each <strong>Service</strong> belongs to one <strong>User</strong> (who requested it).</li>
+    <li>Each <strong>Service</strong> can be assigned to one <strong>Technician</strong>.</li>
+    <li>Each <strong>Service</strong> can have one <strong>Payment</strong> record.</li>
+    <li><strong>Payment Settings</strong> define fixed amounts per service type, which are automatically applied when a new service is created.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- PAGE 3: MODULES -->
+  <h2>6. Module Description</h2>
+
+  <h3>6.1 Authentication Module</h3>
+  <p>
+    This module handles user registration, login, and session management. The system provides <strong>two separate login pages</strong> — one for the Admin and one for the User. This ensures that regular users cannot access administrative features. When a user logs in, the server generates a <strong>JWT token</strong> which is stored in the browser and sent with every subsequent request to verify identity. Passwords are securely hashed using the <strong>bcrypt algorithm</strong> before being stored in the database.
+  </p>
+
+  <h3>6.2 Admin Module</h3>
+  <p>
+    The Admin module provides a comprehensive dashboard with the following capabilities:
+  </p>
+  <ul>
+    <li><strong>Dashboard Overview:</strong> Displays key statistics including total services, completed services, total registered users, number of technicians, and total revenue earned.</li>
+    <li><strong>Services Management:</strong> View all service requests from all users. The admin can assign a technician to each service and update the service status (Pending → Assigned → In Progress → Completed). When a service is marked as completed, the completion date and time are automatically recorded.</li>
+    <li><strong>Users Management:</strong> View all registered users with their contact details and registration dates.</li>
+    <li><strong>Technicians Management:</strong> Add new technicians with their name, email, phone number, and area of specialization (e.g., AC specialist, Fridge specialist).</li>
+    <li><strong>Payment Settings:</strong> Set fixed payment amounts for each service type (e.g., Fridge repair = $500, AC service = $800). These amounts are automatically applied to new service requests.</li>
+    <li><strong>Payments View:</strong> View all payment records across all services, including amounts, status, and associated user and service details. This section is visible only to the admin.</li>
+  </ul>
+
+  <h3>6.3 User Module</h3>
+  <p>
+    The User module provides a simple and intuitive interface:
+  </p>
+  <ul>
+    <li><strong>User Dashboard:</strong> Displays an overview of the user's services including total services, pending services, and completed services, along with a list of recent service requests.</li>
+    <li><strong>Request Service:</strong> Users can submit a new service request by selecting the appliance type (Fridge, AC, TV, Washing Machine, Microwave, etc.), entering the company/brand name (e.g., Samsung, LG, Whirlpool), providing a description of the issue, and selecting a preferred service date.</li>
+    <li><strong>Service History:</strong> Users can view their complete service history in a table format showing service type, company, technician assigned, current status, service date, completion date, and payment details.</li>
+  </ul>
+
+  <h3>6.4 Service Tracking Module</h3>
+  <p>
+    This module is responsible for tracking the entire lifecycle of a service request. Every service goes through the following stages:
+  </p>
+  <ol>
+    <li><strong>Pending:</strong> User submits a service request.</li>
+    <li><strong>Assigned:</strong> Admin assigns a technician to the service.</li>
+    <li><strong>In Progress:</strong> The technician begins the repair work.</li>
+    <li><strong>Completed:</strong> The service is finished. The completion date and time are automatically recorded.</li>
+  </ol>
+  <p>
+    All details are stored in the database — including <strong>what was repaired</strong> (e.g., Fridge, AC, TV), <strong>which company/brand</strong> (e.g., Samsung, LG), <strong>who repaired it</strong> (technician name and phone), <strong>when it was repaired</strong> (date and time), and <strong>how much was charged</strong>. This creates a permanent record that the admin can refer to at any time in the future.
+  </p>
+
+  <h3>6.5 Payment Module</h3>
+  <p>
+    The payment module allows the admin to set <strong>fixed payment amounts</strong> for each type of service. For example, the admin can set Fridge repair at $500, AC servicing at $800, and TV repair at $600. When a user submits a service request, the system automatically looks up the fixed amount for that service type and creates a payment record. Only the admin can view all payment records, ensuring financial data remains private and secure.
+  </p>
+
+  <div class="page-break"></div>
+
+  <!-- PAGE 4: FLOW & SECURITY -->
+  <h2>7. Application Flow</h2>
+
+  <h3>7.1 User Flow</h3>
+  <ol>
+    <li>User opens the application and navigates to the <strong>User Login Page</strong>.</li>
+    <li>New users click "Register" and create an account with name, email, password, phone, and address.</li>
+    <li>After login, the user is redirected to the <strong>User Dashboard</strong> showing an overview of their services.</li>
+    <li>The user can go to <strong>"Request Service"</strong> tab and submit a new service request by selecting the appliance type, entering the brand/company, describing the issue, and choosing a date.</li>
+    <li>The user can view all past and current services in the <strong>"Service History"</strong> tab.</li>
+    <li>The user can see the status of each service (Pending, Assigned, In Progress, or Completed).</li>
+    <li>The user can <strong>only see their own data</strong> — they cannot access any other user's information or the admin panel.</li>
+  </ol>
+
+  <h3>7.2 Admin Flow</h3>
+  <ol>
+    <li>Admin opens the application and navigates to the <strong>Admin Login Page</strong> (separate from user login).</li>
+    <li>Admin logs in with admin credentials.</li>
+    <li>After login, the admin sees the <strong>Admin Dashboard</strong> with statistics overview.</li>
+    <li>Admin can navigate to <strong>"Services"</strong> to view all service requests from all users.</li>
+    <li>Admin <strong>assigns a technician</strong> to each service request.</li>
+    <li>Admin <strong>updates the service status</strong> as it progresses (Pending → Assigned → In Progress → Completed).</li>
+    <li>Admin can go to <strong>"Technicians"</strong> to add new technicians.</li>
+    <li>Admin can go to <strong>"Payment Settings"</strong> to set fixed payment amounts for each service type.</li>
+    <li>Admin can go to <strong>"Payments"</strong> to view all payment records.</li>
+    <li>Admin can go to <strong>"Users"</strong> to view all registered users.</li>
+    <li>All data is <strong>permanently stored in the database</strong> so the admin can look up any past service record at any time.</li>
+  </ol>
+
+  <h2>8. Security Features</h2>
+  <p>
+    Security is a critical aspect of this application. The following measures have been implemented:
+  </p>
+  <ul>
+    <li><strong>Separate Login Pages:</strong> Admin and User have completely separate login pages. A user cannot access the admin portal and vice versa.</li>
+    <li><strong>Role-Based Access Control (RBAC):</strong> Every API endpoint checks the user's role before granting access. Admin-only endpoints reject requests from regular users, and user-only endpoints reject requests from admins.</li>
+    <li><strong>JWT Authentication:</strong> JSON Web Tokens are used for stateless, secure authentication. Tokens expire after 7 days, after which the user must log in again.</li>
+    <li><strong>Password Hashing:</strong> All passwords are hashed using the bcrypt algorithm with a salt round of 10 before being stored in the database. Even if the database is compromised, passwords cannot be read.</li>
+    <li><strong>Protected Routes:</strong> On the frontend, route guards (AdminRoute and UserRoute components) prevent unauthorized navigation to restricted pages.</li>
+    <li><strong>Input Validation:</strong> All API inputs are validated on the server side using express-validator to prevent invalid or malicious data from entering the database.</li>
+    <li><strong>Private Data:</strong> Payment information and user details are only visible to the admin. Users can only see their own service records.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- PAGE 5: API, TECH, CONCLUSION -->
+  <h2>9. API Endpoints</h2>
+  <p>The application exposes the following RESTful API endpoints:</p>
+
+  <table>
+    <tr>
+      <th>Method</th>
+      <th>Endpoint</th>
+      <th>Description</th>
+      <th>Access</th>
+    </tr>
+    <tr><td>POST</td><td>/api/auth/register</td><td>Register a new user account</td><td>Public</td></tr>
+    <tr><td>POST</td><td>/api/auth/login</td><td>Login and get authentication token</td><td>Public</td></tr>
+    <tr><td>GET</td><td>/api/auth/me</td><td>Get current logged-in user details</td><td>Authenticated</td></tr>
+    <tr><td>GET</td><td>/api/admin/dashboard</td><td>Get dashboard statistics</td><td>Admin Only</td></tr>
+    <tr><td>GET</td><td>/api/admin/services</td><td>Get all service requests</td><td>Admin Only</td></tr>
+    <tr><td>GET</td><td>/api/admin/users</td><td>Get all registered users</td><td>Admin Only</td></tr>
+    <tr><td>GET</td><td>/api/admin/technicians</td><td>Get all technicians</td><td>Admin Only</td></tr>
+    <tr><td>POST</td><td>/api/admin/technicians</td><td>Add a new technician</td><td>Admin Only</td></tr>
+    <tr><td>PUT</td><td>/api/admin/services/:id/assign</td><td>Assign technician to a service</td><td>Admin Only</td></tr>
+    <tr><td>PUT</td><td>/api/admin/services/:id/status</td><td>Update service status</td><td>Admin Only</td></tr>
+    <tr><td>POST</td><td>/api/admin/payment-settings</td><td>Set fixed payment amount</td><td>Admin Only</td></tr>
+    <tr><td>GET</td><td>/api/admin/payments</td><td>View all payments</td><td>Admin Only</td></tr>
+    <tr><td>GET</td><td>/api/user/services</td><td>Get user's own services</td><td>User Only</td></tr>
+    <tr><td>GET</td><td>/api/user/profile</td><td>Get user profile</td><td>User Only</td></tr>
+    <tr><td>POST</td><td>/api/services</td><td>Create a new service request</td><td>Authenticated</td></tr>
+  </table>
+
+  <h2>10. Technologies Used</h2>
+  <table>
+    <tr>
+      <th>Component</th>
+      <th>Technology</th>
+      <th>Purpose</th>
+    </tr>
+    <tr><td>Frontend</td><td>React.js</td><td>Building the user interface and single-page application</td></tr>
+    <tr><td>UI Library</td><td>Material-UI (MUI)</td><td>Pre-built modern UI components for a professional look</td></tr>
+    <tr><td>Routing</td><td>React Router</td><td>Navigation between different pages and route protection</td></tr>
+    <tr><td>HTTP Client</td><td>Axios</td><td>Making API calls from frontend to backend</td></tr>
+    <tr><td>Backend</td><td>Node.js</td><td>Server-side JavaScript runtime environment</td></tr>
+    <tr><td>Framework</td><td>Express.js</td><td>Web framework for building REST APIs</td></tr>
+    <tr><td>Database</td><td>SQLite</td><td>Lightweight relational database for storing all data</td></tr>
+    <tr><td>Authentication</td><td>JSON Web Token (JWT)</td><td>Secure, stateless user authentication</td></tr>
+    <tr><td>Password Security</td><td>bcrypt.js</td><td>Hashing passwords before storing in database</td></tr>
+    <tr><td>Validation</td><td>express-validator</td><td>Server-side input validation</td></tr>
+  </table>
+
+  <h2>11. Conclusion</h2>
+  <p>
+    The Service Company Management Application successfully provides a complete digital solution for managing home repair and maintenance services. The application enables users to easily request services for household appliances like fridges, air conditioners, televisions, and washing machines, while administrators can efficiently manage technicians, track service progress, set fixed payment rates, and maintain a comprehensive database of all service records.
+  </p>
+  <p>
+    The system's key strengths include its separate and secure login portals for admin and users, role-based access control ensuring data privacy, automatic record-keeping with date and time stamps, and a permanent database that allows the admin to look up any past service at any time. This is particularly useful for recurring services — for example, when a customer needs annual AC servicing, the admin can quickly check when the last service was done and schedule the next one accordingly.
+  </p>
+  <p>
+    By replacing manual record-keeping with a digital system, this application eliminates the risk of data loss, improves efficiency, enhances customer experience, and provides the admin with a clear overview of all business operations including revenue tracking through the payment management system.
+  </p>
+
+  <h2>12. Future Enhancements</h2>
+  <ul>
+    <li>Add <strong>automated email/SMS reminders</strong> for upcoming service dates (e.g., annual servicing alerts).</li>
+    <li>Integrate <strong>online payment gateway</strong> (Razorpay, Stripe) for direct online payments.</li>
+    <li>Add <strong>technician mobile app</strong> so technicians can update service status from their phones.</li>
+    <li>Implement <strong>service ratings and feedback</strong> from users after service completion.</li>
+    <li>Add <strong>report generation</strong> for monthly/yearly business analytics.</li>
+    <li>Deploy the application on <strong>cloud hosting</strong> (AWS, Heroku) for public access.</li>
+  </ul>
+
+  <div class="footer">
+    <p>Service Company Management Application &mdash; Project Report</p>
+  </div>
+
+</body>
+</html>
