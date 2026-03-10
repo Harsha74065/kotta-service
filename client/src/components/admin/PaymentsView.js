@@ -23,9 +23,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -41,16 +38,15 @@ const API_URL = process.env.REACT_APP_API_URL || '/api';
 const PaymentsView = () => {
   const [payments, setPayments] = useState([]);
   const [services, setServices] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
   const [paymentSettings, setPaymentSettings] = useState([]);
   const [upiSettings, setUpiSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ amount: '', status: '', pay_to: 'admin' });
+  const [editData, setEditData] = useState({ amount: '', status: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createData, setCreateData] = useState({ service_id: '', amount: '', status: 'pending', pay_to: 'admin', upi_id: '' });
+  const [createData, setCreateData] = useState({ service_id: '', amount: '', status: 'pending' });
   const [createError, setCreateError] = useState('');
 
   const [qrDialog, setQrDialog] = useState({ open: false, payment: null });
@@ -60,7 +56,6 @@ const PaymentsView = () => {
     fetchServices();
     fetchPaymentSettings();
     fetchUpiSettings();
-    fetchTechnicians();
   }, []);
 
   const fetchPayments = async () => {
@@ -80,15 +75,6 @@ const PaymentsView = () => {
       setServices(response.data.services);
     } catch (error) {
       console.error('Error fetching services:', error);
-    }
-  };
-
-  const fetchTechnicians = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/admin/technicians`);
-      setTechnicians(response.data.technicians);
-    } catch (error) {
-      console.error('Error fetching technicians:', error);
     }
   };
 
@@ -125,12 +111,12 @@ const PaymentsView = () => {
 
   const handleStartEdit = (payment) => {
     setEditingId(payment.id);
-    setEditData({ amount: payment.amount.toString(), status: payment.status, pay_to: payment.pay_to || 'admin' });
+    setEditData({ amount: payment.amount.toString(), status: payment.status });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditData({ amount: '', status: '', pay_to: 'admin' });
+    setEditData({ amount: '', status: '' });
   };
 
   const handleEditChange = (e) => {
@@ -139,15 +125,12 @@ const PaymentsView = () => {
 
   const handleSaveEdit = async (id) => {
     try {
-      const upiId = editData.pay_to === 'admin'
-        ? (getActiveAdminUpi()?.upi_id || null)
-        : null; // For technician, the technician's UPI will be used
-
+      const adminUpi = getActiveAdminUpi();
       await axios.put(`${API_URL}/admin/payments/${id}`, {
         amount: parseFloat(editData.amount),
         status: editData.status,
-        pay_to: editData.pay_to,
-        upi_id: upiId
+        pay_to: 'admin',
+        upi_id: adminUpi?.upi_id || null
       });
       setEditingId(null);
       fetchPayments();
@@ -159,8 +142,7 @@ const PaymentsView = () => {
 
   const handleCreateOpen = () => {
     setCreateOpen(true);
-    const adminUpi = getActiveAdminUpi();
-    setCreateData({ service_id: '', amount: '', status: 'pending', pay_to: 'admin', upi_id: adminUpi?.upi_id || '' });
+    setCreateData({ service_id: '', amount: '', status: 'pending' });
     setCreateError('');
   };
 
@@ -178,22 +160,6 @@ const PaymentsView = () => {
         return;
       }
     }
-    if (name === 'pay_to') {
-      if (value === 'admin') {
-        const adminUpi = getActiveAdminUpi();
-        setCreateData({ ...createData, pay_to: value, upi_id: adminUpi?.upi_id || '' });
-      } else {
-        // Technician - get the technician's UPI from the service
-        const selectedService = services.find(s => s.id === parseInt(createData.service_id));
-        if (selectedService && selectedService.technician_id) {
-          const tech = technicians.find(t => t.id === selectedService.technician_id);
-          setCreateData({ ...createData, pay_to: value, upi_id: tech?.upi_id || '' });
-        } else {
-          setCreateData({ ...createData, pay_to: value, upi_id: '' });
-        }
-      }
-      return;
-    }
     setCreateData({ ...createData, [name]: value });
   };
 
@@ -205,12 +171,13 @@ const PaymentsView = () => {
       return;
     }
     try {
+      const adminUpi = getActiveAdminUpi();
       await axios.post(`${API_URL}/admin/payments`, {
         service_id: parseInt(createData.service_id),
         amount: parseFloat(createData.amount),
         status: createData.status,
-        pay_to: createData.pay_to,
-        upi_id: createData.upi_id || null
+        pay_to: 'admin',
+        upi_id: adminUpi?.upi_id || null
       });
       handleCreateClose();
       fetchPayments();
@@ -287,25 +254,18 @@ const PaymentsView = () => {
               helperText="Amount is auto-filled from Payment Settings if available"
             />
 
-            {/* Pay To Selection */}
-            <FormControl fullWidth margin="normal">
-              <InputLabel shrink>Customer Pays To</InputLabel>
-              <Select
-                name="pay_to"
-                value={createData.pay_to}
-                onChange={handleCreateChange}
-                label="Customer Pays To"
-              >
-                <MenuItem value="admin">
-                  🏢 Admin Scanner {getActiveAdminUpi() ? `(${getActiveAdminUpi().upi_id})` : '(Not configured)'}
-                </MenuItem>
-                <MenuItem value="technician">
-                  👨‍🔧 Technician Scanner
-                </MenuItem>
-              </Select>
-            </FormControl>
+            {/* Admin Scanner Info */}
+            {getActiveAdminUpi() ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                💳 Customer will pay to: <strong>{getActiveAdminUpi().name}</strong> ({getActiveAdminUpi().upi_id})
+              </Alert>
+            ) : (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                ⚠️ No active UPI scanner! Go to Payment Settings → Add UPI Scanner first.
+              </Alert>
+            )}
 
-            {createData.pay_to === 'admin' && getActiveAdminUpi() && createData.amount && (
+            {getActiveAdminUpi() && createData.amount && (
               <Box sx={{ textAlign: 'center', mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>Payment QR Preview:</Typography>
                 <QRCodeSVG
@@ -345,10 +305,9 @@ const PaymentsView = () => {
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', px: 4 }}>
           {qrDialog.payment && (() => {
-            const upiId = qrDialog.payment.upi_id || getActiveAdminUpi()?.upi_id;
-            const upiName = qrDialog.payment.pay_to === 'technician'
-              ? (qrDialog.payment.technician_name || 'Technician')
-              : (getActiveAdminUpi()?.name || 'Service Company');
+            const adminUpi = getActiveAdminUpi();
+            const upiId = adminUpi?.upi_id;
+            const upiName = adminUpi?.name || 'Service Company';
             return upiId ? (
               <>
                 <Box sx={{ p: 3, bgcolor: '#fff', borderRadius: 2, border: '2px solid #e0e0e0', display: 'inline-block' }}>
@@ -363,9 +322,9 @@ const PaymentsView = () => {
                 <Typography variant="body1" fontWeight="bold">{upiName}</Typography>
                 <Typography variant="body2" color="primary">{upiId}</Typography>
                 <Chip
-                  label={`Pay to: ${qrDialog.payment.pay_to === 'technician' ? 'Technician' : 'Admin'}`}
-                  color={qrDialog.payment.pay_to === 'technician' ? 'info' : 'secondary'}
-                  sx={{ mt: 1 }}
+                  label="Payment goes to Admin Account"
+                  color="secondary"
+                  sx={{ mt: 1, fontWeight: 'bold' }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   Customer: {qrDialog.payment.display_customer_name}
@@ -375,7 +334,7 @@ const PaymentsView = () => {
                 </Typography>
               </>
             ) : (
-              <Alert severity="error">No UPI ID configured for this payment</Alert>
+              <Alert severity="error">No UPI Scanner configured! Go to Payment Settings → Add UPI Scanner first.</Alert>
             );
           })()}
         </DialogContent>
@@ -392,7 +351,6 @@ const PaymentsView = () => {
               <TableCell><strong>Customer</strong></TableCell>
               <TableCell><strong>Service</strong></TableCell>
               <TableCell><strong>Amount</strong></TableCell>
-              <TableCell><strong>Pay To</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
               <TableCell><strong>Method</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
@@ -421,25 +379,6 @@ const PaymentsView = () => {
                     />
                   ) : (
                     <Typography fontWeight="bold" color="primary">₹{payment.amount.toFixed(2)}</Typography>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingId === payment.id ? (
-                    <TextField
-                      select size="small" name="pay_to"
-                      value={editData.pay_to} onChange={handleEditChange}
-                      variant="outlined" sx={{ minWidth: 120 }}
-                    >
-                      <MenuItem value="admin">🏢 Admin</MenuItem>
-                      <MenuItem value="technician">👨‍🔧 Technician</MenuItem>
-                    </TextField>
-                  ) : (
-                    <Chip
-                      label={payment.pay_to === 'technician' ? '👨‍🔧 Technician' : '🏢 Admin'}
-                      color={payment.pay_to === 'technician' ? 'info' : 'secondary'}
-                      size="small"
-                      variant="outlined"
-                    />
                   )}
                 </TableCell>
                 <TableCell>
@@ -496,7 +435,7 @@ const PaymentsView = () => {
             ))}
             {payments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">No payments found. Click "Create Payment" to add one.</Typography>
                 </TableCell>
               </TableRow>

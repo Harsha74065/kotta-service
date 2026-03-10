@@ -63,17 +63,20 @@ const TechnicianDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [qrDialog, setQrDialog] = useState({ open: false, data: null, loading: false });
+  const [adminScanner, setAdminScanner] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [servicesRes, dueRes, statsRes] = await Promise.all([
+      const [servicesRes, dueRes, statsRes, scannerRes] = await Promise.all([
         axios.get(`${API_URL}/technician/my-services`),
         axios.get(`${API_URL}/technician/due-services`),
-        axios.get(`${API_URL}/technician/dashboard`)
+        axios.get(`${API_URL}/technician/dashboard`),
+        axios.get(`${API_URL}/technician/admin-scanner`)
       ]);
       setServices(servicesRes.data.services);
       setDueServices(dueRes.data.services);
       setStats(statsRes.data.stats);
+      setAdminScanner(scannerRes.data.upi);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -217,6 +220,63 @@ const TechnicianDashboard = () => {
             </Card>
           </Grid>
         </Grid>
+
+        {/* Admin Payment Scanner - Always Visible */}
+        {adminScanner && (
+          <Paper 
+            elevation={4} 
+            sx={{ 
+              mb: 3, 
+              p: 3, 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: 3,
+              color: 'white'
+            }}
+          >
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={7}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <QrCodeIcon sx={{ fontSize: 35 }} />
+                  <Typography variant="h5" fontWeight="bold">
+                    Payment Scanner
+                  </Typography>
+                </Box>
+                <Typography variant="body1" sx={{ mb: 2, opacity: 0.9 }}>
+                  Show this QR code to the customer for payment. All payments go directly to admin account.
+                </Typography>
+                <Chip 
+                  label={`UPI: ${adminScanner.upi_id}`} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}
+                />
+                <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                  {adminScanner.name || 'Admin'}
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block', mt: 2, opacity: 0.7 }}>
+                  💡 Customer can scan using PhonePe / GPay / Paytm / any UPI app
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={5} sx={{ textAlign: 'center' }}>
+                <Box sx={{ 
+                  bgcolor: 'white', 
+                  p: 2, 
+                  borderRadius: 3, 
+                  display: 'inline-block',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                }}>
+                  <QRCodeSVG
+                    value={`upi://pay?pa=${adminScanner.upi_id}&pn=${encodeURIComponent(adminScanner.name || 'Admin')}&cu=INR`}
+                    size={180}
+                    level="H"
+                    includeMargin
+                  />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 'bold' }}>
+                    Scan to Pay
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+        )}
 
         {/* Tabs */}
         <Paper sx={{ mb: 2 }}>
@@ -507,9 +567,9 @@ const TechnicianDashboard = () => {
                 <Divider sx={{ my: 2 }} />
 
                 <Chip
-                  label={`Pay to: ${qrDialog.data.pay_to_label}`}
-                  color={qrDialog.data.pay_to === 'technician' ? 'info' : 'secondary'}
-                  sx={{ mb: 1 }}
+                  label="Payment goes to Admin Account"
+                  color="secondary"
+                  sx={{ mb: 1, fontWeight: 'bold' }}
                 />
 
                 <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>

@@ -158,7 +158,7 @@ router.get('/profile', (req, res) => {
   });
 });
 
-// Get payment QR details for a service (technician shows to customer)
+// Get payment QR details for a service (technician shows admin's scanner to customer)
 router.get('/payment-qr/:serviceId', (req, res) => {
   const { serviceId } = req.params;
   const database = db.getDb();
@@ -171,13 +171,10 @@ router.get('/payment-qr/:serviceId', (req, res) => {
       s.company,
       s.customer_name,
       s.customer_phone,
-      c.name as db_customer_name,
-      t.name as technician_name,
-      t.upi_id as technician_upi_id
+      c.name as db_customer_name
     FROM payments p
     JOIN services s ON p.service_id = s.id
     LEFT JOIN customers c ON s.customer_id = c.id
-    LEFT JOIN technicians t ON s.technician_id = t.id
     WHERE p.service_id = ? AND s.technician_id = ?
   `, [serviceId, req.user.id], (err, payment) => {
     if (err) {
@@ -187,34 +184,31 @@ router.get('/payment-qr/:serviceId', (req, res) => {
       return res.status(404).json({ message: 'No payment found for this service' });
     }
 
-    // If pay_to is admin, get admin's active UPI
-    if (payment.pay_to === 'admin' || !payment.upi_id) {
-      database.get('SELECT * FROM upi_settings WHERE is_active = 1', (err, upiSetting) => {
-        if (err) {
-          return res.status(500).json({ message: 'Server error', error: err.message });
-        }
-        res.json({
-          payment: {
-            ...payment,
-            display_customer_name: payment.db_customer_name || payment.customer_name || 'Customer',
-            qr_upi_id: payment.upi_id || (upiSetting ? upiSetting.upi_id : null),
-            qr_name: upiSetting ? upiSetting.name : 'Service Company',
-            pay_to_label: 'Admin'
-          }
-        });
-      });
-    } else {
-      // Pay to technician
+    // Always use admin's active UPI scanner
+    database.get('SELECT * FROM upi_settings WHERE is_active = 1', (err, upiSetting) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+      }
       res.json({
         payment: {
           ...payment,
           display_customer_name: payment.db_customer_name || payment.customer_name || 'Customer',
-          qr_upi_id: payment.upi_id || payment.technician_upi_id,
-          qr_name: payment.technician_name || 'Technician',
-          pay_to_label: 'Technician'
+          qr_upi_id: upiSetting ? upiSetting.upi_id : null,
+          qr_name: upiSetting ? upiSetting.name : 'Service Company'
         }
       });
+    });
+  });
+});
+
+// Get admin's active UPI scanner (for showing on technician dashboard)
+router.get('/admin-scanner', (req, res) => {
+  const database = db.getDb();
+  database.get('SELECT * FROM upi_settings WHERE is_active = 1', (err, upiSetting) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err.message });
     }
+    res.json({ upi: upiSetting || null });
   });
 });
 
