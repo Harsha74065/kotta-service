@@ -42,9 +42,13 @@ const createTables = async () => {
         phone TEXT NOT NULL,
         email TEXT,
         address TEXT,
+        service_type TEXT,
         notes TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
+
+      // Add service_type column to existing customers table (if upgrading)
+      db.run(`ALTER TABLE customers ADD COLUMN service_type TEXT`, () => {});
 
       // Technicians table (with password for login)
       db.run(`CREATE TABLE IF NOT EXISTS technicians (

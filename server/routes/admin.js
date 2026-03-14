@@ -32,12 +32,12 @@ router.post('/customers', [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, phone, email, address, notes } = req.body;
+  const { name, phone, email, address, service_type, notes } = req.body;
   const database = db.getDb();
 
   database.run(
-    'INSERT INTO customers (name, phone, email, address, notes) VALUES (?, ?, ?, ?, ?)',
-    [name, phone, email || null, address || null, notes || null],
+    'INSERT INTO customers (name, phone, email, address, service_type, notes) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, phone, email || null, address || null, service_type || null, notes || null],
     function(err) {
       if (err) {
         return res.status(500).json({ message: 'Error adding customer', error: err.message });
@@ -50,12 +50,12 @@ router.post('/customers', [
 // Update customer
 router.put('/customers/:id', (req, res) => {
   const { id } = req.params;
-  const { name, phone, email, address, notes } = req.body;
+  const { name, phone, email, address, service_type, notes } = req.body;
   const database = db.getDb();
 
   database.run(
-    'UPDATE customers SET name = ?, phone = ?, email = ?, address = ?, notes = ? WHERE id = ?',
-    [name, phone, email || null, address || null, notes || null, id],
+    'UPDATE customers SET name = ?, phone = ?, email = ?, address = ?, service_type = ?, notes = ? WHERE id = ?',
+    [name, phone, email || null, address || null, service_type || null, notes || null, id],
     function(err) {
       if (err) {
         return res.status(500).json({ message: 'Error updating customer', error: err.message });

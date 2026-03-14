@@ -20,7 +20,9 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  Snackbar
+  Snackbar,
+  MenuItem,
+  Chip
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,6 +35,8 @@ import {
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
+const serviceTypes = ['AC', 'Fridge', 'TV', 'Washing Machine', 'Microwave', 'Other'];
+
 const CustomersManagement = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,7 @@ const CustomersManagement = () => {
     phone: '',
     email: '',
     address: '',
+    service_type: '',
     notes: ''
   });
   const [editData, setEditData] = useState({
@@ -50,6 +55,7 @@ const CustomersManagement = () => {
     phone: '',
     email: '',
     address: '',
+    service_type: '',
     notes: ''
   });
   const [error, setError] = useState('');
@@ -74,7 +80,7 @@ const CustomersManagement = () => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setFormData({ name: '', phone: '', email: '', address: '', notes: '' });
+    setFormData({ name: '', phone: '', email: '', address: '', service_type: '', notes: '' });
     setError('');
   };
 
@@ -112,13 +118,14 @@ const CustomersManagement = () => {
       phone: customer.phone,
       email: customer.email || '',
       address: customer.address || '',
+      service_type: customer.service_type || '',
       notes: customer.notes || ''
     });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditData({ name: '', phone: '', email: '', address: '', notes: '' });
+    setEditData({ name: '', phone: '', email: '', address: '', service_type: '', notes: '' });
   };
 
   const handleSaveEdit = async (id) => {
@@ -194,6 +201,17 @@ const CustomersManagement = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
+              fullWidth select label="Service Type" name="service_type"
+              value={formData.service_type} onChange={handleChange}
+              margin="normal"
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value=""><em>Select Service Type</em></MenuItem>
+              {serviceTypes.map((type) => (
+                <MenuItem key={type} value={type}>{type}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
               fullWidth label="Notes" name="notes"
               value={formData.notes} onChange={handleChange}
               margin="normal" multiline rows={2}
@@ -231,6 +249,7 @@ const CustomersManagement = () => {
               <TableCell><strong>Phone</strong></TableCell>
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Address</strong></TableCell>
+              <TableCell><strong>Service Type</strong></TableCell>
               <TableCell><strong>Notes</strong></TableCell>
               <TableCell><strong>Added Date</strong></TableCell>
               <TableCell align="center"><strong>Actions</strong></TableCell>
@@ -269,6 +288,20 @@ const CustomersManagement = () => {
                     <TextField size="small" name="address" value={editData.address} onChange={handleEditChange} variant="outlined" multiline />
                   ) : (
                     customer.address || '-'
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingId === customer.id ? (
+                    <TextField select size="small" name="service_type" value={editData.service_type} onChange={handleEditChange} variant="outlined" sx={{ minWidth: 130 }}>
+                      <MenuItem value=""><em>None</em></MenuItem>
+                      {serviceTypes.map((type) => (
+                        <MenuItem key={type} value={type}>{type}</MenuItem>
+                      ))}
+                    </TextField>
+                  ) : (
+                    customer.service_type ? (
+                      <Chip label={customer.service_type} color="primary" size="small" variant="outlined" />
+                    ) : '-'
                   )}
                 </TableCell>
                 <TableCell>
@@ -314,7 +347,7 @@ const CustomersManagement = () => {
             ))}
             {customers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">No customers found. Add one to get started.</Typography>
                 </TableCell>
               </TableRow>
