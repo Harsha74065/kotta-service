@@ -15,7 +15,8 @@ import {
   Card,
   CardContent,
   Chip,
-  Divider
+  Divider,
+  Snackbar
 } from '@mui/material';
 import {
   Build as BuildIcon,
@@ -29,7 +30,8 @@ import {
   NotificationsActive as AlertIcon,
   Close as CloseIcon,
   Phone as PhoneIcon,
-  ArrowForward as ArrowIcon
+  ArrowForward as ArrowIcon,
+  AutoFixHigh as SmartIcon
 } from '@mui/icons-material';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -40,6 +42,7 @@ const DashboardHome = () => {
   const [dueServices, setDueServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alertOpen, setAlertOpen] = useState(true);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
   useEffect(() => {
     fetchData();
@@ -74,14 +77,20 @@ const DashboardHome = () => {
     );
   }
 
-  // Split due services
-  const overdueServices = dueServices.filter(s => getDaysUntilDue(s.due_date) <= 0);
+  // Split due services (use effective_due_date from auto-reminders)
+  const getEffectiveDue = (s) => s.effective_due_date || s.next_due_date || s.due_date;
+  // Completed visits should not show as OVERDUE/URGENT on the dashboard (due list still includes them for history / next_due_date)
+  const isOpenService = (s) => s.status !== 'completed';
+  const overdueServices = dueServices.filter(
+    s => isOpenService(s) && getDaysUntilDue(getEffectiveDue(s)) <= 0
+  );
   const urgentServices = dueServices.filter(s => {
-    const days = getDaysUntilDue(s.due_date);
+    if (!isOpenService(s)) return false;
+    const days = getDaysUntilDue(getEffectiveDue(s));
     return days > 0 && days <= 7;
   });
   const upcomingServices = dueServices.filter(s => {
-    const days = getDaysUntilDue(s.due_date);
+    const days = getDaysUntilDue(getEffectiveDue(s));
     return days > 7 && days <= 30;
   });
 
@@ -90,43 +99,59 @@ const DashboardHome = () => {
       title: 'Total Services',
       value: stats?.totalServices || 0,
       icon: <BuildIcon sx={{ fontSize: 40 }} />,
-      color: '#1976d2'
+      color: '#1976d2',
+      path: '/admin/services',
+      message: `You have ${stats?.totalServices || 0} total services. Navigating to Services...`
     },
     {
       title: 'Active Services',
       value: stats?.activeServices || 0,
       icon: <ActiveIcon sx={{ fontSize: 40 }} />,
-      color: '#ff9800'
+      color: '#ff9800',
+      path: '/admin/services',
+      message: `${stats?.activeServices || 0} services are currently active. Navigating to Services...`
     },
     {
       title: 'Completed',
       value: stats?.completedServices || 0,
       icon: <CheckIcon sx={{ fontSize: 40 }} />,
-      color: '#2e7d32'
+      color: '#2e7d32',
+      path: '/admin/services',
+      message: `${stats?.completedServices || 0} services completed. Navigating to Services...`
     },
     {
       title: 'Total Customers',
       value: stats?.totalCustomers || 0,
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      color: '#ed6c02'
+      color: '#ed6c02',
+      path: '/admin/customers',
+      message: `You have ${stats?.totalCustomers || 0} customers. Navigating to Customers...`
     },
     {
       title: 'Technicians',
       value: stats?.totalTechnicians || 0,
       icon: <PersonIcon sx={{ fontSize: 40 }} />,
-      color: '#9c27b0'
+      color: '#9c27b0',
+      path: '/admin/technicians',
+      message: `${stats?.totalTechnicians || 0} technicians registered. Navigating to Technicians...`
     },
     {
       title: 'Due Soon',
       value: stats?.dueSoon || 0,
       icon: <ScheduleIcon sx={{ fontSize: 40 }} />,
-      color: '#e91e63'
+      color: '#e91e63',
+      path: '/admin/due-services',
+      message: stats?.dueSoon > 0
+        ? `⚠️ ${stats?.dueSoon} services are due soon! Navigating to Due Reminders...`
+        : '✅ No services due soon. Navigating to Due Reminders...'
     },
     {
       title: 'Total Revenue',
       value: `₹${stats?.totalRevenue?.toFixed(2) || '0.00'}`,
       icon: <MoneyIcon sx={{ fontSize: 40 }} />,
-      color: '#2e7d32'
+      color: '#2e7d32',
+      path: '/admin/payments',
+      message: `Total revenue: ₹${stats?.totalRevenue?.toFixed(2) || '0.00'}. Navigating to Payments...`
     }
   ];
 
@@ -156,7 +181,8 @@ const DashboardHome = () => {
           </AlertTitle>
           {overdueServices.slice(0, 3).map((s, i) => (
             <Typography key={i} variant="body2">
-              • <strong>{s.display_customer_name}</strong> — {s.service_type} ({s.company}) — Due: {new Date(s.due_date).toLocaleDateString()} — Phone: {s.display_customer_phone}
+              • <strong>{s.display_customer_name}</strong> — {s.service_type} ({s.company}) — Due: {new Date(getEffectiveDue(s)).toLocaleDateString()} — Phone: {s.display_customer_phone}
+              {s.is_auto_reminder ? ' 🤖 Auto' : ''}
             </Typography>
           ))}
           {overdueServices.length > 3 && (
@@ -184,10 +210,11 @@ const DashboardHome = () => {
             {urgentServices.length} Service{urgentServices.length > 1 ? 's' : ''} Due Within 7 Days!
           </AlertTitle>
           {urgentServices.slice(0, 3).map((s, i) => {
-            const days = getDaysUntilDue(s.due_date);
+            const days = getDaysUntilDue(getEffectiveDue(s));
             return (
               <Typography key={i} variant="body2">
-                • <strong>{s.display_customer_name}</strong> — {s.service_type} ({s.company}) — Due in <strong>{days} day{days !== 1 ? 's' : ''}</strong> ({new Date(s.due_date).toLocaleDateString()}) — Phone: {s.display_customer_phone}
+                • <strong>{s.display_customer_name}</strong> — {s.service_type} ({s.company}) — Due in <strong>{days} day{days !== 1 ? 's' : ''}</strong> ({new Date(getEffectiveDue(s)).toLocaleDateString()}) — Phone: {s.display_customer_phone}
+                {s.is_auto_reminder ? ' 🤖 Auto' : ''}
               </Typography>
             );
           })}
@@ -220,10 +247,11 @@ const DashboardHome = () => {
             {upcomingServices.length} Service{upcomingServices.length > 1 ? 's' : ''} Due in Next 30 Days
           </AlertTitle>
           {upcomingServices.slice(0, 3).map((s, i) => {
-            const days = getDaysUntilDue(s.due_date);
+            const days = getDaysUntilDue(getEffectiveDue(s));
             return (
               <Typography key={i} variant="body2">
-                • <strong>{s.display_customer_name}</strong> — {s.service_type} — Due in {days} days ({new Date(s.due_date).toLocaleDateString()})
+                • <strong>{s.display_customer_name}</strong> — {s.service_type} — Due in {days} days ({new Date(getEffectiveDue(s)).toLocaleDateString()})
+                {s.is_auto_reminder ? ' 🤖 Auto' : ''}
               </Typography>
             );
           })}
@@ -256,10 +284,18 @@ const DashboardHome = () => {
                 alignItems: 'center',
                 textAlign: 'center',
                 borderTop: `4px solid ${card.color}`,
-                cursor: card.title === 'Due Soon' ? 'pointer' : 'default',
-                '&:hover': card.title === 'Due Soon' ? { boxShadow: 6, bgcolor: '#fce4ec' } : {}
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  boxShadow: 8,
+                  transform: 'translateY(-4px)',
+                  bgcolor: `${card.color}08`
+                }
               }}
-              onClick={card.title === 'Due Soon' ? () => navigate('/admin/due-services') : undefined}
+              onClick={() => {
+                setSnackbar({ open: true, message: card.message, severity: 'info' });
+                setTimeout(() => navigate(card.path), 800);
+              }}
             >
               <Box sx={{ color: card.color, mb: 2 }}>
                 {card.icon}
@@ -294,10 +330,12 @@ const DashboardHome = () => {
           </Box>
           <Grid container spacing={2}>
             {dueServices.slice(0, 6).map((service) => {
-              const daysLeft = getDaysUntilDue(service.due_date);
+              const effectiveDue = getEffectiveDue(service);
+              const daysLeft = getDaysUntilDue(effectiveDue);
               const isOverdue = daysLeft <= 0;
               const isUrgent = daysLeft > 0 && daysLeft <= 7;
-              const borderColor = isOverdue ? '#f44336' : isUrgent ? '#ff9800' : '#1976d2';
+              const isAuto = service.is_auto_reminder || service.reminder_auto === 1;
+              const borderColor = isOverdue ? '#f44336' : isUrgent ? '#ff9800' : isAuto ? '#9c27b0' : '#1976d2';
 
               return (
                 <Grid item xs={12} sm={6} md={4} key={service.id}>
@@ -306,7 +344,7 @@ const DashboardHome = () => {
                     sx={{
                       borderLeft: `5px solid ${borderColor}`,
                       '&:hover': { boxShadow: 6 },
-                      bgcolor: isOverdue ? '#fff5f5' : isUrgent ? '#fffbf0' : '#f8fbff'
+                      bgcolor: isOverdue ? '#fff5f5' : isUrgent ? '#fffbf0' : isAuto ? '#faf5ff' : '#f8fbff'
                     }}
                   >
                     <CardContent sx={{ pb: '12px !important' }}>
@@ -314,12 +352,18 @@ const DashboardHome = () => {
                         <Typography variant="subtitle1" fontWeight="bold">
                           {service.service_type} — {service.company}
                         </Typography>
-                        <Chip
-                          icon={isOverdue ? <WarningIcon /> : <ScheduleIcon />}
-                          label={isOverdue ? 'OVERDUE' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
-                          color={isOverdue ? 'error' : isUrgent ? 'warning' : 'info'}
-                          size="small"
-                        />
+                        <Box display="flex" gap={0.5}>
+                          {isAuto && (
+                            <Chip icon={<SmartIcon />} label="Auto" size="small"
+                              sx={{ bgcolor: '#9c27b0', color: 'white' }} />
+                          )}
+                          <Chip
+                            icon={isOverdue ? <WarningIcon /> : <ScheduleIcon />}
+                            label={isOverdue ? 'OVERDUE' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
+                            color={isOverdue ? 'error' : isUrgent ? 'warning' : 'info'}
+                            size="small"
+                          />
+                        </Box>
                       </Box>
                       <Divider sx={{ mb: 1 }} />
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
@@ -342,7 +386,8 @@ const DashboardHome = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                         <ScheduleIcon fontSize="small" color={isOverdue ? 'error' : 'warning'} />
                         <Typography variant="body2" color={isOverdue ? 'error' : 'text.secondary'}>
-                          Due: <strong>{new Date(service.due_date).toLocaleDateString()}</strong>
+                          Due: <strong>{new Date(effectiveDue).toLocaleDateString()}</strong>
+                          {isAuto && service.reminder_months ? ` (every ${service.reminder_months}mo)` : ''}
                         </Typography>
                       </Box>
                       {service.technician_name && (
@@ -359,6 +404,23 @@ const DashboardHome = () => {
           </Grid>
         </Box>
       )}
+
+      {/* Snackbar for card click messages */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', fontSize: '0.95rem' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

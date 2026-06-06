@@ -98,12 +98,11 @@ router.get('/services', (req, res) => {
       c.email as db_customer_email,
       t.name as technician_name,
       t.phone as technician_phone,
-      p.amount as payment_amount,
-      p.status as payment_status
+      (SELECT amount FROM payments WHERE service_id = s.id ORDER BY id DESC LIMIT 1) AS payment_amount,
+      (SELECT status FROM payments WHERE service_id = s.id ORDER BY id DESC LIMIT 1) AS payment_status
     FROM services s
     LEFT JOIN customers c ON s.customer_id = c.id
     LEFT JOIN technicians t ON s.technician_id = t.id
-    LEFT JOIN payments p ON s.id = p.service_id
     ORDER BY s.created_at DESC
   `, (err, services) => {
     if (err) {
@@ -155,7 +154,8 @@ router.post('/services', [
             if (err) {
               return res.status(500).json({ message: 'Error creating service', error: err.message });
             }
-            res.status(201).json({ message: 'Service created successfully', id: this.lastID, customer_id: newCustomerId });
+            const newId = this.lastID;
+            res.status(201).json({ message: 'Service created successfully', id: newId, customer_id: newCustomerId });
           }
         );
       }
@@ -168,7 +168,8 @@ router.post('/services', [
         if (err) {
           return res.status(500).json({ message: 'Error creating service', error: err.message });
         }
-        res.status(201).json({ message: 'Service created successfully', id: this.lastID });
+        const newId = this.lastID;
+        res.status(201).json({ message: 'Service created successfully', id: newId });
       }
     );
   }
@@ -256,12 +257,47 @@ router.put('/services/:id/status', [
       if (err) {
         return res.status(500).json({ message: 'Error updating status', error: err.message });
       }
+
+      // AUTO-REMINDER: When completed, automatically set next_due_date based on reminder_settings
+      if (status === 'completed') {
+        database.get('SELECT service_type FROM services WHERE id = ?', [id], (err, service) => {
+          if (err || !service) return;
+
+          database.get(
+            'SELECT reminder_months FROM reminder_settings WHERE service_type = ? AND is_active = 1',
+            [service.service_type],
+            (err, setting) => {
+              if (err || !setting) return;
+
+              const completionDate = new Date();
+              const nextDue = new Date(completionDate);
+              nextDue.setMonth(nextDue.getMonth() + setting.reminder_months);
+              const nextDueISO = nextDue.toISOString();
+
+              database.run(
+                'UPDATE services SET next_due_date = ?, due_date = COALESCE(due_date, ?), reminder_auto = 1 WHERE id = ?',
+                [nextDueISO, nextDueISO, id]
+              );
+
+              // Log the auto-reminder
+              database.run(
+                'INSERT INTO activity_logs (event_type, entity_type, entity_id, message, details, performed_by) VALUES (?, ?, ?, ?, ?, ?)',
+                ['AUTO_REMINDER_SET', 'service', id,
+                  `Auto-reminder set for ${setting.reminder_months} months (${nextDue.toLocaleDateString()}) — ${service.service_type}`,
+                  JSON.stringify({ service_type: service.service_type, reminder_months: setting.reminder_months, next_due: nextDueISO }),
+                  'system']
+              );
+            }
+          );
+        });
+      }
+
       res.json({ message: 'Status updated successfully' });
     }
   );
 });
 
-// Get services due soon (for admin overview)
+// Get services due soon (for admin overview) — includes auto-reminders
 router.get('/due-services', (req, res) => {
   const database = db.getDb();
   database.all(`
@@ -269,14 +305,17 @@ router.get('/due-services', (req, res) => {
       s.*,
       c.name as db_customer_name,
       c.phone as db_customer_phone,
+      c.address as db_customer_address,
       t.name as technician_name,
-      t.phone as technician_phone
+      t.phone as technician_phone,
+      r.reminder_months
     FROM services s
     LEFT JOIN customers c ON s.customer_id = c.id
     LEFT JOIN technicians t ON s.technician_id = t.id
-    WHERE s.due_date IS NOT NULL 
-      AND s.due_date >= datetime('now')
-    ORDER BY s.due_date ASC
+    LEFT JOIN reminder_settings r ON s.service_type = r.service_type
+    WHERE (s.due_date IS NOT NULL AND s.due_date >= datetime('now', '-30 days'))
+       OR (s.next_due_date IS NOT NULL AND s.next_due_date >= datetime('now', '-30 days'))
+    ORDER BY COALESCE(s.next_due_date, s.due_date) ASC
   `, (err, services) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err.message });
@@ -284,9 +323,89 @@ router.get('/due-services', (req, res) => {
     const enrichedServices = services.map(s => ({
       ...s,
       display_customer_name: s.db_customer_name || s.customer_name || '-',
-      display_customer_phone: s.db_customer_phone || s.customer_phone || '-'
+      display_customer_phone: s.db_customer_phone || s.customer_phone || '-',
+      display_customer_address: s.db_customer_address || s.customer_address || '-',
+      effective_due_date: s.next_due_date || s.due_date,
+      is_auto_reminder: s.reminder_auto === 1
     }));
     res.json({ services: enrichedServices });
+  });
+});
+
+// ==================== REMINDER SETTINGS ====================
+
+// Get all reminder settings
+router.get('/reminder-settings', (req, res) => {
+  const database = db.getDb();
+  database.all('SELECT * FROM reminder_settings ORDER BY service_type', (err, settings) => {
+    if (err) return res.status(500).json({ message: 'Server error', error: err.message });
+    res.json({ settings });
+  });
+});
+
+// Add/Update reminder setting
+router.post('/reminder-settings', [
+  body('service_type').notEmpty().withMessage('Service type is required'),
+  body('reminder_months').isInt({ min: 1, max: 60 }).withMessage('Months must be between 1 and 60')
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { service_type, reminder_months, is_active } = req.body;
+  const database = db.getDb();
+
+  database.get('SELECT * FROM reminder_settings WHERE service_type = ?', [service_type], (err, existing) => {
+    if (err) return res.status(500).json({ message: 'Server error', error: err.message });
+
+    if (existing) {
+      database.run(
+        'UPDATE reminder_settings SET reminder_months = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE service_type = ?',
+        [reminder_months, is_active !== undefined ? is_active : 1, service_type],
+        function(err) {
+          if (err) return res.status(500).json({ message: 'Error updating', error: err.message });
+          res.json({ message: 'Reminder setting updated' });
+        }
+      );
+    } else {
+      database.run(
+        'INSERT INTO reminder_settings (service_type, reminder_months, is_active) VALUES (?, ?, ?)',
+        [service_type, reminder_months, is_active !== undefined ? is_active : 1],
+        function(err) {
+          if (err) return res.status(500).json({ message: 'Error creating', error: err.message });
+          res.status(201).json({ message: 'Reminder setting created', id: this.lastID });
+        }
+      );
+    }
+  });
+});
+
+// Delete reminder setting
+router.delete('/reminder-settings/:id', (req, res) => {
+  const { id } = req.params;
+  const database = db.getDb();
+  database.run('DELETE FROM reminder_settings WHERE id = ?', [id], function(err) {
+    if (err) return res.status(500).json({ message: 'Error deleting', error: err.message });
+    if (this.changes === 0) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Reminder setting deleted' });
+  });
+});
+
+// Get customer service history (to see past services and when next is due)
+router.get('/customer-history/:customerId', (req, res) => {
+  const { customerId } = req.params;
+  const database = db.getDb();
+  database.all(`
+    SELECT s.*, t.name as technician_name, p.amount as payment_amount, p.status as payment_status,
+      r.reminder_months
+    FROM services s
+    LEFT JOIN technicians t ON s.technician_id = t.id
+    LEFT JOIN payments p ON s.id = p.service_id
+    LEFT JOIN reminder_settings r ON s.service_type = r.service_type
+    WHERE s.customer_id = ?
+    ORDER BY s.created_at DESC
+  `, [customerId], (err, services) => {
+    if (err) return res.status(500).json({ message: 'Server error', error: err.message });
+    res.json({ services });
   });
 });
 

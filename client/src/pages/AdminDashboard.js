@@ -82,7 +82,7 @@ const AdminDashboard = () => {
       >
         <Toolbar>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Service Company - Admin Panel
+            ServiceOps — Admin Panel
           </Typography>
 
           {/* Notification Bell */}

@@ -199,6 +199,9 @@ const PaymentsView = () => {
   const servicesWithoutPayment = services.filter(
     service => !payments.some(payment => payment.service_id === service.id)
   );
+  const servicesWithPayment = services.filter(
+    service => payments.some(payment => payment.service_id === service.id)
+  );
 
   if (loading) {
     return (
@@ -235,14 +238,30 @@ const PaymentsView = () => {
               margin="normal" required InputLabelProps={{ shrink: true }}
             >
               <MenuItem value="">-- Select a Service --</MenuItem>
+              {servicesWithoutPayment.length > 0 && (
+                <MenuItem disabled sx={{ fontWeight: 'bold', bgcolor: '#e3f2fd', color: '#1976d2' }}>
+                  — No Payment Yet —
+                </MenuItem>
+              )}
               {servicesWithoutPayment.map((service) => (
                 <MenuItem key={service.id} value={service.id}>
                   #{service.id} - {service.service_type} ({service.company}) - {service.display_customer_name || service.customer_name || 'Unknown'}
                   {service.technician_name ? ` [Tech: ${service.technician_name}]` : ''}
                 </MenuItem>
               ))}
-              {servicesWithoutPayment.length === 0 && (
-                <MenuItem value="" disabled>All services already have payments</MenuItem>
+              {servicesWithPayment.length > 0 && (
+                <MenuItem disabled sx={{ fontWeight: 'bold', bgcolor: '#fff3e0', color: '#e65100' }}>
+                  — Already Has Payment (add another) —
+                </MenuItem>
+              )}
+              {servicesWithPayment.map((service) => (
+                <MenuItem key={`paid-${service.id}`} value={service.id}>
+                  #{service.id} - {service.service_type} ({service.company}) - {service.display_customer_name || service.customer_name || 'Unknown'}
+                  {service.technician_name ? ` [Tech: ${service.technician_name}]` : ''} 💳
+                </MenuItem>
+              ))}
+              {services.length === 0 && (
+                <MenuItem value="" disabled>No services found — create a service first</MenuItem>
               )}
             </TextField>
             <TextField
@@ -307,7 +326,7 @@ const PaymentsView = () => {
           {qrDialog.payment && (() => {
             const adminUpi = getActiveAdminUpi();
             const upiId = adminUpi?.upi_id;
-            const upiName = adminUpi?.name || 'Service Company';
+            const upiName = adminUpi?.name || 'ServiceOps';
             return upiId ? (
               <>
                 <Box sx={{ p: 3, bgcolor: '#fff', borderRadius: 2, border: '2px solid #e0e0e0', display: 'inline-block' }}>

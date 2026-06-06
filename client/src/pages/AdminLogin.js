@@ -56,6 +56,12 @@ const AdminLogin = () => {
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             Authorized administrators only
           </Typography>
+          {process.env.NODE_ENV === 'development' && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Local default account: <strong>admin@service.com</strong> or <strong>admin@example.com</strong>
+              {' — '}password <strong>admin123</strong>
+            </Alert>
+          )}
           
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>

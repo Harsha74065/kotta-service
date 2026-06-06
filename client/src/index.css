@@ -17,3 +17,29 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-resume,
+  .print-resume * {
+    visibility: visible;
+  }
+
+  .print-resume {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 40px;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  .print-resume .MuiTypography-root {
+    color: #000 !important;
+  }
+}

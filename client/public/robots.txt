@@ -7,4 +7,4 @@ Disallow: /admin/
 Disallow: /technician/
 
 # Sitemap
-Sitemap: https://kotta-service.onrender.com/sitemap.xml
+Sitemap: https://serviceops-platform.onrender.com/sitemap.xml

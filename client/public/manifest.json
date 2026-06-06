@@ -1,6 +1,6 @@
 {
-  "short_name": "Service App",
-  "name": "Service Company Management App",
+  "short_name": "ServiceOps",
+  "name": "ServiceOps — Service Management Platform",
   "icons": [
     {
       "src": "favicon.ico",

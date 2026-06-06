@@ -140,6 +140,48 @@ const createTables = async () => {
       db.run(`ALTER TABLE payments ADD COLUMN pay_to TEXT DEFAULT 'admin'`, () => {});
       db.run(`ALTER TABLE payments ADD COLUMN upi_id TEXT`, () => {});
 
+      // Activity Logs table (for observability & intelligence tracking)
+      db.run(`CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        entity_type TEXT,
+        entity_id INTEGER,
+        message TEXT NOT NULL,
+        details TEXT,
+        performed_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      // Add priority column to services (for smart scheduling)
+      db.run(`ALTER TABLE services ADD COLUMN priority INTEGER DEFAULT 0`, () => {});
+      db.run(`ALTER TABLE services ADD COLUMN assigned_by TEXT DEFAULT 'manual'`, () => {});
+
+      // Service Reminder Settings (auto due-date after X months per service type)
+      db.run(`CREATE TABLE IF NOT EXISTS reminder_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service_type TEXT NOT NULL UNIQUE,
+        reminder_months INTEGER NOT NULL DEFAULT 6,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      // Add next_due_date and reminder_auto columns to services (for auto-reminder tracking)
+      db.run(`ALTER TABLE services ADD COLUMN next_due_date DATETIME`, () => {});
+      db.run(`ALTER TABLE services ADD COLUMN reminder_auto INTEGER DEFAULT 0`, () => {});
+
+      // Insert default reminder settings for common service types
+      const defaultReminders = [
+        ['Fridge', 6], ['AC', 6], ['Washing Machine', 6],
+        ['TV', 12], ['Microwave', 12]
+      ];
+      defaultReminders.forEach(([type, months]) => {
+        db.run(
+          `INSERT OR IGNORE INTO reminder_settings (service_type, reminder_months) VALUES (?, ?)`,
+          [type, months]
+        );
+      });
+
       // Final step - create default admin
       db.run(`SELECT 1`, (err) => {
         if (err) {
@@ -153,38 +195,37 @@ const createTables = async () => {
 };
 
 const createDefaultAdmin = async () => {
+  const defaultPassword = 'admin123';
+  const adminEmails = ['admin@service.com', 'admin@example.com'];
+
+  const ensureUser = (email, hash) =>
+    new Promise((res, rej) => {
+      db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => {
+        if (err) return rej(err);
+        if (row) return res(false);
+        db.run(
+          'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+          ['Admin', email, hash, 'admin'],
+          (insertErr) => (insertErr ? rej(insertErr) : res(true))
+        );
+      });
+    });
+
   return new Promise((resolve, reject) => {
-    const defaultEmail = 'admin@service.com';
-    const defaultPassword = 'admin123';
-    
-    db.get('SELECT * FROM users WHERE email = ?', [defaultEmail], (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      
-      if (!row) {
-        bcrypt.hash(defaultPassword, 10, (err, hash) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          
-          db.run(
-            'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-            ['Admin', defaultEmail, hash, 'admin'],
-            (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                console.log('Default admin created: admin@service.com / admin123');
-                resolve();
-              }
-            }
-          );
-        });
-      } else {
+    bcrypt.hash(defaultPassword, 10, async (err, hash) => {
+      if (err) return reject(err);
+      try {
+        let anyCreated = false;
+        for (const email of adminEmails) {
+          const created = await ensureUser(email, hash);
+          if (created) anyCreated = true;
+        }
+        if (anyCreated) {
+          console.log('Default admin(s) created: admin@service.com or admin@example.com / admin123');
+        }
         resolve();
+      } catch (e) {
+        reject(e);
       }
     });
   });

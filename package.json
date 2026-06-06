@@ -1,7 +1,7 @@
 {
   "name": "service-company-app",
   "version": "1.0.0",
-  "description": "KottA Service Company - Home appliance repair and management",
+  "description": "ServiceOps - Home appliance repair and service management platform",
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -12,8 +12,8 @@
     "install-all": "npm install && cd client && npm install",
     "render-build": "npm install && cd client && npm install && npm run build"
   },
-  "keywords": ["service", "repair", "management", "kotta"],
-  "author": "KottA Service Company",
+  "keywords": ["service", "repair", "management", "serviceops"],
+  "author": "ServiceOps",
   "license": "ISC",
   "engines": {
     "node": ">=16.0.0"

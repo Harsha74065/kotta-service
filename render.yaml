@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kotta-service
+    name: serviceops-platform
     runtime: node
     plan: free
     buildCommand: npm install && cd client && npm install && npm run build

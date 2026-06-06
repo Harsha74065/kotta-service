@@ -20,6 +20,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/technician', require('./routes/technician'));
 app.use('/api/payment', require('./routes/payment'));
+app.use('/api/dsa-demo', require('./routes/dsaDemo'));
 
 // ---------- Serve React Build (ALWAYS if build exists) ----------
 const buildPath = path.join(__dirname, '..', 'client', 'build');
@@ -36,7 +37,7 @@ if (fs.existsSync(buildPath)) {
 } else {
   console.log('No React build folder found — API-only mode');
   app.get('/', (req, res) => {
-    res.json({ message: 'KottA Service API is running! Build the client to see the website.' });
+    res.json({ message: 'ServiceOps API is running! Build the client to see the website.' });
   });
 }
 
