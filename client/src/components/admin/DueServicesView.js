@@ -4,7 +4,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, CircularProgress, Chip, Card, CardContent, Grid, Button, IconButton,
   TextField, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions,
-  Snackbar, Alert, Tooltip, Switch, Tabs, Tab, Divider
+  Snackbar, Alert, Tooltip, Switch, Tabs, Tab
 } from '@mui/material';
 import {
   Schedule as ScheduleIcon, Warning as WarningIcon, Phone as PhoneIcon,
@@ -118,7 +118,6 @@ const DueServicesView = () => {
   };
 
   // Split services
-  const now = new Date();
   const overdueServices = services.filter(s => {
     const d = getDaysUntilDue(s.effective_due_date || s.due_date);
     return d !== null && d < 0;
