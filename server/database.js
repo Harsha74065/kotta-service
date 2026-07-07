@@ -1,8 +1,11 @@
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, 'database.sqlite');
+// Use persistent disk on Render when mounted, else local server folder
+const defaultDataDir = fs.existsSync('/var/data') ? '/var/data' : __dirname;
+const DB_PATH = process.env.DATABASE_PATH || path.join(defaultDataDir, 'database.sqlite');
 
 let db;
 
@@ -14,7 +17,7 @@ const init = () => {
         reject(err);
         return;
       }
-      console.log('Connected to SQLite database');
+      console.log('Connected to SQLite database at', DB_PATH);
       createTables().then(resolve).catch(reject);
     });
   });
@@ -187,7 +190,10 @@ const createTables = async () => {
         if (err) {
           reject(err);
         } else {
-          createDefaultAdmin().then(resolve).catch(reject);
+          createDefaultAdmin()
+            .then(() => seedDemoDataIfEmpty())
+            .then(resolve)
+            .catch(reject);
         }
       });
     });
@@ -229,6 +235,111 @@ const createDefaultAdmin = async () => {
       }
     });
   });
+};
+
+// Demo data for interviews — re-created automatically when DB is empty (e.g. after Render restart)
+const seedDemoDataIfEmpty = async () => {
+  const count = await new Promise((res, rej) => {
+    db.get('SELECT COUNT(*) as count FROM services', (err, row) => (err ? rej(err) : res(row.count)));
+  });
+  if (count > 0) return;
+
+  const techHash = await bcrypt.hash('tech123', 10);
+  const adminId = await new Promise((res, rej) => {
+    db.get('SELECT id FROM users WHERE role = ? LIMIT 1', ['admin'], (err, row) =>
+      err ? rej(err) : res(row?.id || 1)
+    );
+  });
+
+  const techId = await new Promise((res, rej) => {
+    db.run(
+      `INSERT OR IGNORE INTO technicians (name, email, password, phone, specialization, upi_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ['Balaji', 'tech@service.com', techHash, '9876543210', 'AC, Cooler, and Fridge', 'balaji@upi'],
+      function (err) {
+        if (err) return rej(err);
+        if (this.changes > 0) {
+          res(this.lastID);
+        } else {
+          db.get('SELECT id FROM technicians WHERE email = ?', ['tech@service.com'], (e, row) =>
+            e ? rej(e) : res(row.id)
+          );
+        }
+      }
+    );
+  });
+
+  const customers = [
+    ['Sharth', '9972828643', 'sharth@email.com', 'Bangalore, Karnataka', 'Fridge'],
+    ['Rajesh Kumar', '9988776655', 'rajesh@email.com', 'Mysore, Karnataka', 'AC'],
+    ['Priya', '9123456789', 'priya@email.com', 'Bengaluru', 'Washing Machine']
+  ];
+
+  const customerIds = [];
+  for (const [name, phone, email, address, serviceType] of customers) {
+    const id = await new Promise((res, rej) => {
+      db.run(
+        'INSERT INTO customers (name, phone, email, address, service_type) VALUES (?, ?, ?, ?, ?)',
+        [name, phone, email, address, serviceType],
+        function (err) {
+          if (err) rej(err);
+          else res(this.lastID);
+        }
+      );
+    });
+    customerIds.push(id);
+  }
+
+  const services = [
+    [customerIds[0], 'Sharth', '9972828643', 'Bangalore, Karnataka', 'Fridge', 'Whirlpool',
+      'Annual fridge service — compressor check and gas refill', 'assigned', techId, 1200],
+    [customerIds[1], 'Rajesh Kumar', '9988776655', 'Mysore, Karnataka', 'AC', 'LG',
+      'AC not cooling — needs filter cleaning', 'in_progress', techId, 1500],
+    [customerIds[2], 'Priya', '9123456789', 'Bengaluru', 'Washing Machine', 'Samsung',
+      'Drum making noise during spin cycle', 'pending', null, 800]
+  ];
+
+  const today = new Date();
+  const nextYear = new Date(today);
+  nextYear.setFullYear(nextYear.getFullYear() + 1);
+
+  for (const [custId, cName, cPhone, cAddr, sType, company, desc, status, technicianId, amount] of services) {
+    const serviceId = await new Promise((res, rej) => {
+      db.run(
+        `INSERT INTO services (user_id, customer_id, customer_name, customer_phone, customer_address,
+         service_type, company, description, status, technician_id, service_date, due_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [adminId, custId, cName, cPhone, cAddr, sType, company, desc, status, technicianId,
+          today.toISOString(), nextYear.toISOString()],
+        function (err) {
+          if (err) rej(err);
+          else res(this.lastID);
+        }
+      );
+    });
+
+    await new Promise((res, rej) => {
+      db.run(
+        'INSERT INTO payments (service_id, amount, status, payment_method) VALUES (?, ?, ?, ?)',
+        [serviceId, amount, status === 'assigned' ? 'pending' : 'pending', 'manual'],
+        (err) => (err ? rej(err) : res())
+      );
+    });
+  }
+
+  // Default payment rates for demo
+  const rates = [['Fridge', 1200], ['AC', 1500], ['Washing Machine', 800], ['TV', 1000]];
+  for (const [type, amount] of rates) {
+    await new Promise((res) => {
+      db.run(
+        'INSERT OR IGNORE INTO payment_settings (service_type, amount) VALUES (?, ?)',
+        [type, amount],
+        () => res()
+      );
+    });
+  }
+
+  console.log('Demo data seeded for interviews (Balaji / tech@service.com / tech123)');
 };
 
 const getDb = () => db;

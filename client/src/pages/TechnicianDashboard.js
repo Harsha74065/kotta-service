@@ -53,6 +53,12 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
+// Always use technician token directly — avoids conflict when admin is also logged in
+const techAuthConfig = () => {
+  const token = localStorage.getItem('tech_token');
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+};
+
 const TechnicianDashboard = () => {
   const navigate = useNavigate();
   const { techUser: user, techLogout } = useAuth();
@@ -61,23 +67,29 @@ const TechnicianDashboard = () => {
   const [dueServices, setDueServices] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [qrDialog, setQrDialog] = useState({ open: false, data: null, loading: false });
   const [adminScanner, setAdminScanner] = useState(null);
 
   const fetchData = useCallback(async () => {
+    setFetchError('');
+    setLoading(true);
     try {
+      const auth = techAuthConfig();
       const [servicesRes, dueRes, statsRes, scannerRes] = await Promise.all([
-        axios.get(`${API_URL}/technician/my-services`),
-        axios.get(`${API_URL}/technician/due-services`),
-        axios.get(`${API_URL}/technician/dashboard`),
-        axios.get(`${API_URL}/technician/admin-scanner`)
+        axios.get(`${API_URL}/technician/my-services`, auth),
+        axios.get(`${API_URL}/technician/due-services`, auth),
+        axios.get(`${API_URL}/technician/dashboard`, auth),
+        axios.get(`${API_URL}/technician/admin-scanner`, auth)
       ]);
       setServices(servicesRes.data.services);
       setDueServices(dueRes.data.services);
       setStats(statsRes.data.stats);
       setAdminScanner(scannerRes.data.upi);
     } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to load services. Try logging out and back in.';
+      setFetchError(msg);
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
@@ -95,7 +107,7 @@ const TechnicianDashboard = () => {
 
   const handleStatusChange = async (serviceId, newStatus) => {
     try {
-      await axios.put(`${API_URL}/technician/services/${serviceId}/status`, { status: newStatus });
+      await axios.put(`${API_URL}/technician/services/${serviceId}/status`, { status: newStatus }, techAuthConfig());
       setSnackbar({ open: true, message: `Service marked as ${newStatus}!`, severity: 'success' });
       fetchData();
     } catch (error) {
@@ -106,7 +118,7 @@ const TechnicianDashboard = () => {
   const handleShowPaymentQR = async (serviceId) => {
     setQrDialog({ open: true, data: null, loading: true });
     try {
-      const response = await axios.get(`${API_URL}/technician/payment-qr/${serviceId}`);
+      const response = await axios.get(`${API_URL}/technician/payment-qr/${serviceId}`, techAuthConfig());
       setQrDialog({ open: true, data: response.data.payment, loading: false });
     } catch (error) {
       setQrDialog({ open: false, data: null, loading: false });
@@ -120,7 +132,7 @@ const TechnicianDashboard = () => {
 
   const handleMarkPaymentCollected = async (serviceId) => {
     try {
-      await axios.put(`${API_URL}/technician/payment-collected/${serviceId}`);
+      await axios.put(`${API_URL}/technician/payment-collected/${serviceId}`, {}, techAuthConfig());
       setSnackbar({ open: true, message: 'Payment marked as collected!', severity: 'success' });
       setQrDialog({ open: false, data: null, loading: false });
       fetchData();
@@ -177,6 +189,12 @@ const TechnicianDashboard = () => {
       </AppBar>
 
       <Container maxWidth="xl" sx={{ mt: 3, mb: 4 }}>
+        {fetchError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFetchError('')}>
+            {fetchError}
+            {' '}If admin is open in another tab, log out of admin first, then refresh.
+          </Alert>
+        )}
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={4} md={2}>

@@ -25,6 +25,7 @@ router.get('/my-services', (req, res) => {
     WHERE s.technician_id = ?
     ORDER BY 
       CASE s.status 
+      
         WHEN 'pending' THEN 1 
         WHEN 'assigned' THEN 2 
         WHEN 'in_progress' THEN 3 

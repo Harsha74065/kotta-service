@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CircularProgress, Box } from '@mui/material';
@@ -6,8 +6,8 @@ import { CircularProgress, Box } from '@mui/material';
 const TechnicianRoute = ({ children }) => {
   const { isTechAuthenticated, loading, setActiveTechToken } = useAuth();
 
-  // Set tech token as the active axios token when entering technician area
-  useEffect(() => {
+  // Set tech token before child components fetch data (useLayoutEffect runs first)
+  useLayoutEffect(() => {
     if (isTechAuthenticated) {
       setActiveTechToken();
     }

@@ -222,10 +222,11 @@ router.put('/services/:id/assign', (req, res) => {
   const { id } = req.params;
   const { technician_id } = req.body;
   const database = db.getDb();
+  const techId = technician_id ? parseInt(technician_id, 10) : null;
 
   database.run(
     'UPDATE services SET technician_id = ?, status = CASE WHEN status = \'pending\' THEN \'assigned\' ELSE status END WHERE id = ?',
-    [technician_id || null, id],
+    [techId, id],
     function(err) {
       if (err) {
         return res.status(500).json({ message: 'Error assigning technician', error: err.message });

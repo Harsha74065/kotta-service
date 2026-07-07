@@ -86,6 +86,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       localStorage.setItem('admin_token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setAdminUser(user);
       return { success: true, user };
     } catch (error) {
@@ -103,6 +104,7 @@ export const AuthProvider = ({ children }) => {
       const { token, user } = response.data;
 
       localStorage.setItem('tech_token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setTechUser(user);
       return { success: true, user };
     } catch (error) {
